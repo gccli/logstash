@@ -16,9 +16,13 @@ Run logstash container
 
 * Run detached mode
 
-    docker run --name logx -d -p 5514:5514/udp -v ${PWD}/x.conf:/logstash/pipeline.conf logstash
+    docker run --name logx -d -p 5510-5519:5510-5519/udp -v ${PWD}/x:/logstash/pipeline.conf logstash
 
-    docker run --name logy -d -p 5520-5525:5520-5525/udp -v ${PWD}/y.conf:/logstash/pipeline.conf logstash
+    docker run --name logy -d -p 5520-5529:5520-5529/udp -v ${PWD}/y:/logstash/pipeline.conf logstash
 
     # send udp log to port 5520
     echo -n hello world | nc -q1 -u 127.0.0.1 5520
+
+* Remove running container
+
+    docker rm -vf logx logy

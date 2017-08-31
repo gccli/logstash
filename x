@@ -1,6 +1,6 @@
 input {
   udp {
-    port => 5514
+    port => 5520
     add_field => {
       "vendor" => "waf"
       "category" => "attack"
@@ -9,8 +9,6 @@ input {
 }
 
 filter {
-  kv {
-  }
 }
 
 
