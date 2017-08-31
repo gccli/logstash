@@ -1,16 +1,15 @@
 input {
-  udp {
-    port => 5520
+  syslog {
+    port => 5530
     add_field => {
-      "vendor" => "waf"
-      "category" => "attack"
+      "vendor" => "hsmp"
+      "category" => "virus"
     }
   }
 }
 
 filter {
 }
-
 
 output {
   stdout { codec => rubydebug }
