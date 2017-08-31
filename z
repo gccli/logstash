@@ -3,14 +3,24 @@ input {
     port => 5530
     add_field => {
       "vendor" => "hsmp"
-      "category" => "virus"
     }
   }
 }
 
 filter {
+   json {
+     source => "message"
+     remove_field => ["message"]
+   }
 }
 
 output {
   stdout { codec => rubydebug }
+
+  redis {
+        data_type => "list"
+        host => ["redis"]
+        key => "logstash"
+        codec => json
+  }
 }
