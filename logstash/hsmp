@@ -10,7 +10,7 @@ input {
 filter {
    json {
      source => "message"
-     remove_field => ["message"]
+     #remove_field => ["message"]
    }
 }
 

@@ -1,0 +1,31 @@
+version: '2'
+services:
+  kibana:
+    build:
+      context: kibana
+    ports:
+      - 5601:5601
+    links:
+      - elasticsearch
+  elasticsearch:
+    build:
+      context: es
+    volumes:
+      - ./es/data:/elasticsearch/data
+    ports:
+      - 9200:9200
+  logstash:
+    build:
+      context: logstash
+    ports:
+      - "5530:5530/udp"
+    volumes:
+      - ./logstash/hsmp:/logstash/pipeline.conf
+    links:
+      - redis
+      - elasticsearch
+
+  redis:
+    image: "redis:alpine"
+    ports:
+      - 6379:6379
