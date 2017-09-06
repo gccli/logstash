@@ -1,10 +1,12 @@
 FROM python:2.7
 
-ADD . /app
-WORKDIR /app
+ADD . /pipe
+WORKDIR /pipe
 
-RUN pip install -r requirements.txt
+RUN set -ex && \
+    pip install -r requirements.txt
 
-VOLUME ["/app"]
-EXPOSE 3031
-CMD ["uwsgi", "app.ini"]
+COPY docker-entrypoint.sh /usr/bin
+
+CMD ["python", "pipe.py"]
+ENTRYPOINT ["docker-entrypoint.sh"]

@@ -7,13 +7,24 @@ services:
       - 5601:5601
     links:
       - elasticsearch
-  elasticsearch:
+  elasticsearch: # master
     build:
       context: es
     volumes:
-      - ./es/data:/elasticsearch/data
+      - ./data/es/master:/elasticsearch/data
     ports:
       - 9200:9200
+      - 9300:9300
+  es_node:       # slave
+    build:
+      context: es
+    volumes:
+      - ./data/es/0:/elasticsearch/data
+    ports:
+      - 9200
+      - 9300
+    depends_on:
+      - elasticsearch
   logstash:
     build:
       context: logstash
@@ -24,7 +35,17 @@ services:
     links:
       - redis
       - elasticsearch
-
+  pipe:
+    build:
+      context: pipe
+    volumes:
+      - ./pipe/pipe.py:/pipe/pipe.py
+    environment:
+      - ES_HOST=elasticsearch
+      - REDIS_HOST=redis
+    links:
+      - redis
+      - elasticsearch
   redis:
     image: "redis:alpine"
     ports:

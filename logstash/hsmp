@@ -10,11 +10,11 @@ input {
 filter {
    json {
      source => "message"
-     remove_field => ["message", "timestamp"]
    }
 
    mutate {
-      rename => { "program" => "log_type" }
+      rename => { "program" => "log_type"
+                  "timestamp" => "logtime" }
       gsub => [
         "log_type", "log_", ""
       ]
@@ -22,8 +22,9 @@ filter {
    }
 
    date {
-      match => [ "defense_time", "UNIX"]
+      match => [ "logtime", "MMM dd HH:mm:ss"]
       #timezone => "Asia/Shanghai"
+      remove_field => ["message"]
   }
 }
 
