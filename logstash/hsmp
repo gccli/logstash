@@ -22,8 +22,9 @@ filter {
    }
 
    date {
-      match => [ "logtime", "MMM dd HH:mm:ss"]
-      #timezone => "Asia/Shanghai"
+      match => ["logtime", "MMM dd HH:mm:ss"]
+      timezone => "Asia/Shanghai"
+      #timezone => "UTC"
       remove_field => ["message"]
   }
 }
