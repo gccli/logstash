@@ -20,9 +20,20 @@ class Pipe(object):
                                                sniff_on_connection_fail=True,
                                                sniffer_timeout=60)
 
-    def index(self):
+    def current_index(self):
         today = datetime.datetime.now().strftime("%Y%m%d")
         return 'logstash-{0}'.format(today)
+
+
+    def index(self, d):
+        try:
+            res = self._es.index(index=self.current_index(),
+                                 doc_type=d['log_type'], body=d)
+        except elasticsearch.ElasticsearchException as e:
+            logging.error("failed to index {0} - {1}".format(logdata, e.error))
+            return None
+
+        return res
 
     def run(self):
         while True:
@@ -30,16 +41,14 @@ class Pipe(object):
             try:
                 d = json.loads(logdata)
             except:
-                logging.info("failed to parse {0}".format(logdata))
+                logging.error("failed to parse {0}".format(logdata))
                 continue
 
-            try:
-                res = self._es.index(index=self.index(), doc_type='log', body=d)
-            except elasticsearch.ElasticsearchException as e:
-                logging.error("failed to index {0} - {1}".format(logdata, e.error))
-                continue
+            if not (d.has_key('vendor') and d.has_key('log_type')):
+                logging.error("Invalid log format {0}".format(logdata))
 
-            logging.info('log type {0} has {1}'.format(d['log_type'], res['result']))
+            res = self.index(d)
+
 
 if __name__ == '__main__':
     logger = logging.getLogger()
