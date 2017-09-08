@@ -1,0 +1,8 @@
+cluster.name: search
+network.host: 0.0.0.0
+node.name: es1
+
+discovery.zen.minimum_master_nodes: 2
+discovery.zen.ping.unicast.hosts:
+  - es0
+  - es2

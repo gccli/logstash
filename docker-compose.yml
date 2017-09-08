@@ -1,30 +1,40 @@
 version: '2'
 services:
-  kibana:
-    build:
-      context: kibana
-    ports:
-      - 5601:5601
-    links:
-      - elasticsearch
-  elasticsearch: # master
-    build:
-      context: es
-    volumes:
-      - ./data/es/master:/elasticsearch/data
-    ports:
-      - 9200:9200
-      - 9300:9300
-  es_node:       # slave
+  es0:
+    container_name: elk_es0
     build:
       context: es
     volumes:
       - ./data/es/0:/elasticsearch/data
+      - ./es/config/0/elasticsearch.yml:/elasticsearch/config/elasticsearch.yml
     ports:
-      - 9200
+      - 9200:9200
+      - 9300:9300
+  es1:
+    container_name: elk_es1
+    build:
+      context: es
+    volumes:
+      - ./data/es/1:/elasticsearch/data
+      - ./es/config/1/elasticsearch.yml:/elasticsearch/config/elasticsearch.yml
+    ports:
+      - 9201:9200
       - 9300
     depends_on:
-      - elasticsearch
+      - es0
+  es2:
+    container_name: elk_es2
+    build:
+      context: es
+    volumes:
+      - ./data/es/2:/elasticsearch/data
+      - ./es/config/2/elasticsearch.yml:/elasticsearch/config/elasticsearch.yml
+    ports:
+      - 9202:9200
+      - 9300
+    depends_on:
+      - es0
+
   logstash:
     build:
       context: logstash
@@ -34,18 +44,30 @@ services:
       - ./logstash/hsmp:/logstash/pipeline.conf
     links:
       - redis
-      - elasticsearch
+
+  kibana:
+    build:
+      context: kibana
+    ports:
+      - 5601:5601
+    volumes:
+      - ./kibana/kibana.yml:/kibana/config/kibana.yml
+    links:
+      - es0
+
   pipe:
     build:
       context: pipe
     volumes:
       - ./pipe/pipe.py:/pipe/pipe.py
     environment:
-      - ES_HOST=elasticsearch
+      - ES_HOST=es0
       - REDIS_HOST=redis
     links:
       - redis
-      - elasticsearch
+      - es0
+      - es1
+      - es2
   redis:
     image: "redis:alpine"
     ports:

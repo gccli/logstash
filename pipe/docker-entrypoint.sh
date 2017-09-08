@@ -5,7 +5,7 @@ set -e
 
 while true
 do
-    status=$(curl "http://${ES_HOST:-localhost}:9200/_cat/health" | awk '{ print $4 }')
+    status=$(curl "http://${ES_HOST:-localhost}:9200/_cat/health" 2>/dev/null | awk '{ print $4 }')
     if [ $? -ne 0 ]; then
         echo "elasticsearch is unavailable"
         sleep 1
@@ -19,7 +19,7 @@ do
     fi
 
     if [ $status != "red" ]; then
-        echo "elasticsearch is ready"
+        echo "elasticsearch is ready, status:$status"
         break
     fi
 done

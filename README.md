@@ -1,5 +1,11 @@
-Log collection for CSMP
-=======================
+System settings
+===============
+
+sysctl -w vm.max_map_count=262144
+
+
+Log collection
+==============
 
 build
 -----
@@ -24,3 +30,10 @@ elasticsearch
         curl http://localhost:9200/logstash-20170906/_mapping?pretty
         # delete indices
         curl -XDELETE http://localhost:9200/logstash-*
+
+
+redis
+-----
+
+    # link from client
+    docker run --rm -it --link redis redis:alpine redis-cli -h redis
