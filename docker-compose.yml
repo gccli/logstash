@@ -35,13 +35,15 @@ services:
     depends_on:
       - es0
 
-  logstash:
+  syslogd_hsmp:
+    container_name: elk_syslogd_hsmp
     build:
-      context: logstash
+      context: syslogd
+    command: /syslogd.py -port 5530 hsmp
     ports:
       - "5530:5530/udp"
     volumes:
-      - ./logstash/hsmp:/logstash/pipeline.conf
+      - ./syslogd/syslogd.py:/syslogd.py
     links:
       - redis
 

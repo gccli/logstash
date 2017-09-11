@@ -1,4 +1,4 @@
-Middleware
+pipe
 ==========
 
 1. Read log from redis
