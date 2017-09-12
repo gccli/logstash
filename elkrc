@@ -1,0 +1,14 @@
+#! /bin/bash
+
+export PATH=$PATH:${PWD}/bin
+
+alias logs='docker-compose logs --tail=100 -f'
+alias lpipe='docker-compose logs --tail=100 -f pipe'
+alias dcps='docker-compose ps'
+alias dcup='docker-compose up -d'
+alias dcdown='docker-compose down -v'
+
+alias vfwl='docker-compose logs --tail=100 -f syslogd_vfw'
+alias vfwr='docker-compose restart syslogd_vfw'
+alias hsmpl='docker-compose logs --tail=100 -f syslogd_hsmp'
+alias hsmpr='docker-compose restart syslogd_hsmp'

@@ -3,6 +3,7 @@
 
 import argparse
 import os
+import re
 import sys
 import logging
 import SocketServer
@@ -11,20 +12,18 @@ import Queue
 import json
 import thread
 import redis
-import datetime
+from datetime import tzinfo, timedelta, datetime
 
-redisdb = None
-class UDPHandler(SocketServer.BaseRequestHandler):
-    def handle(self):
-        data = self.request[0].strip()
-        self.server.enqueue((self.client_address[0], data))
+######## Plugin for parsing safekit syslog ########
+
+class TZ(tzinfo):
+    def utcoffset(self, dt): return timedelta(hours=+8)
 
 class BasePlugin(object):
     def __init__(self, client_ip, message):
         self.client_ip = client_ip
         self.message = message
         self.setup()
-        self.handle()
 
     def setup(self):
         pass
@@ -60,6 +59,12 @@ class hsmp(BasePlugin):
 
         self._pattern = priority + timestamp + hostname + appname + apppid + message
 
+    def _add_timestamp(self, log):
+        d = datetime.strptime(log['log_time'], '%b %d %H:%M:%S')
+        d = d.replace(year=datetime.today().year,
+                      tzinfo=TZ())
+        log['@timestamp'] = d.isoformat()
+
     def handle(self):
         try:
             parsed = self._pattern.parseString(self.message)
@@ -67,7 +72,7 @@ class hsmp(BasePlugin):
             logging.warn("Failed to parse message {0}".format(self.message))
             return
 
-        log = {}
+        log = {"vendor": "hsmp"}
         log["log_priority"] = parsed[0]
         log["log_time"] = ' '.join(parsed[1:4])
         log["log_host"] = parsed[4]
@@ -75,17 +80,51 @@ class hsmp(BasePlugin):
         log["log_pid"] = parsed[6]
 
         try:
-            log.update(json.loads(parsed[7]))
+            json_dict =json.loads(parsed[7])
         except:
             logging.warn("Invalid json {0}".format(parsed[7]))
-            return
+            return None
 
+        log.update(json_dict)
+        self._add_timestamp(log)
         print json.dumps(log, indent=2); sys.stdout.flush()
-        redisdb.rpush('logstash', json.dumps(log));
+
+        return log
 
 class vfw(BasePlugin):
+    def _add_timestamp(self, log):
+        d = datetime.fromtimestamp(float(log['log_time']))
+        d = d.replace(tzinfo=TZ())
+        log['@timestamp'] = d.isoformat()
+
     def handle(self):
-        print 'vfw', self.message
+
+        try:
+            log = re.findall(r'(\S+)="(.*?)"', self.message)
+            log = dict(log)
+        except:
+            logging.warn("Failed to parse message [{0}]".format(self.message))
+            return None
+
+        log["vendor"] = "vfw"
+        log["log_type"] = log.pop("type")
+        log["log_time"] = log.pop("time")
+
+        self._add_timestamp(log)
+        print json.dumps(log, indent=2); sys.stdout.flush()
+
+        return log
+
+class waf(BasePlugin):
+    def handle(self):
+        log = {"vendor": "waf"}
+        return log
+
+######## Syslog daemon ########
+class UDPHandler(SocketServer.BaseRequestHandler):
+    def handle(self):
+        data = self.request[0].strip()
+        self.server.enqueue((self.client_address[0], data))
 
 class Syslogd(SocketServer.UDPServer):
     def __init__(self, port, plugin_class, **kwargs):
@@ -93,13 +132,23 @@ class Syslogd(SocketServer.UDPServer):
         SocketServer.UDPServer.__init__(self, ('0.0.0.0', port), UDPHandler)
         self.queue = Queue.Queue(kwargs.get('qsize'))
 
-        def _process_thread(plugin_class, queue):
+        self.redisdb = redis.Redis(host=kwargs.get('redis_host'))
+
+        def _process_thread(plugin_class, queue, redisdb):
             while True:
                 client_ip, message = queue.get()
-                plugin_class(client_ip, message)
+                log = plugin_class(client_ip, message).handle()
+                if not log:
+                    continue
+                try:
+                    redisdb.rpush('logstash', json.dumps(log))
+                except:
+                    logging.error("Failed to add data to redis")
+
 
         for i in range(kwargs.get('threads')):
-            x = thread.start_new_thread(_process_thread, (plugin_class, self.queue))
+            x = thread.start_new_thread(_process_thread,
+                                        (plugin_class, self.queue, self.redisdb))
             logging.info('Starting thread {0}'.format(x))
 
         logging.info("UDP listen on port {0}".format(port))
@@ -112,10 +161,14 @@ class Syslogd(SocketServer.UDPServer):
     def run(self):
         self.serve_forever()
 
-def hsmp_test():
-    s = '<133>Sep 12 11:35:52 10.95.46.25 log_ips[32007]: {"operation":1,"mid":"01894490abae5e108154df67ee6fb00b","id":9148,"protocol":6,"defense_time":1505187343,"remote_port":56292,"local_mac":"00:50:56:B5:21:9D","local_ip":"10.95.46.66","remote_ip":"10.95.46.91","local_port":1,"remote_mac":"00:50:56:84:16:85"}'
 
-    hsmp('1.1.1.1', s)
+def plugin_test(plugin_name):
+    try:
+        s = open('{0}.log'.format(plugin_name), 'r').readline()
+        s = s.strip()
+        eval(plugin_name)('1.1.1.1', s).handle()
+    except IOError as e:
+        print 'Can not exec test case:', e
 
 if __name__ == "__main__":
     logger = logging.getLogger()
@@ -143,11 +196,8 @@ if __name__ == "__main__":
     parser.add_argument('plugin', nargs='?', choices=['vfw','hsmp','waf'])
     args = parser.parse_args()
 
-    redisdb = redis.Redis(host=args.redis)
+    plugin_test(args.plugin)
     syslogd = Syslogd(args.port, eval(args.plugin),
-                      threads=args.threads, qsize=args.qsize)
-
-    hsmp_test()
-    sys.exit(0)
-
+                      threads=args.threads, qsize=args.qsize,
+                      redis_host=args.redis)
     syslogd.run()

@@ -30,7 +30,7 @@ class Pipe(object):
             res = self._es.index(index=self.current_index(),
                                  doc_type=d['log_type'], body=d)
         except elasticsearch.ElasticsearchException as e:
-            logging.error("failed to index {0} - {1}".format(d, e.error))
+            logging.error("Failed to index {0} - {1}".format(d, e.error))
             return None
 
         return res
@@ -46,6 +46,7 @@ class Pipe(object):
 
             if not (d.has_key('vendor') and d.has_key('log_type')):
                 logging.error("Invalid log format {0}".format(logdata))
+                continue
 
             res = self.index(d)
 
