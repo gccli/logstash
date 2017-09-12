@@ -39,11 +39,11 @@ services:
     container_name: elk_syslogd_hsmp
     build:
       context: syslogd
-    command: /syslogd.py -port 5530 hsmp
+    command: syslogd.py -port 5530 -redis redis hsmp
     ports:
       - "5530:5530/udp"
     volumes:
-      - ./syslogd/syslogd.py:/syslogd.py
+      - ./syslogd/syslogd.py:/usr/bin/syslogd.py
     links:
       - redis
 
@@ -72,5 +72,7 @@ services:
       - es2
   redis:
     image: "redis:alpine"
+    volumes:
+      - ./data/redis:/data
     ports:
       - 6379:6379

@@ -30,7 +30,7 @@ class Pipe(object):
             res = self._es.index(index=self.current_index(),
                                  doc_type=d['log_type'], body=d)
         except elasticsearch.ElasticsearchException as e:
-            logging.error("failed to index {0} - {1}".format(logdata, e.error))
+            logging.error("failed to index {0} - {1}".format(d, e.error))
             return None
 
         return res

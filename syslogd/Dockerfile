@@ -1,9 +1,8 @@
 FROM python:2.7
 
-COPY docker-entrypoint.sh /usr/bin
-COPY syslogd.py /
+COPY syslogd.py docker-entrypoint.sh /usr/bin/
 
-RUN set -ex && pip install redis
+RUN set -ex && pip install redis pyparsing
 
-CMD ["/syslogd.py"]
+CMD ["syslogd.py"]
 ENTRYPOINT ["docker-entrypoint.sh"]
