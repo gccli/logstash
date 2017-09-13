@@ -1,8 +1,13 @@
 System settings
 ===============
 
-sysctl -w vm.max_map_count=262144
+Notes:
 
+Start elasticsearch should modify the kernel parameters, and change the owner of data directory
+
+    sysctl -w vm.max_map_count=262144
+    # 1000 is the user id of elasticsearch container
+    chown -R 1000 data/es/0/nodes
 
 Log collection
 ==============
@@ -11,7 +16,6 @@ build
 -----
 
 docker-compose up --build
-
 
 General operation
 =================
@@ -31,9 +35,9 @@ elasticsearch
         # delete indices
         curl -XDELETE http://localhost:9200/logstash-*
 
-
 redis
 -----
 
-    # link from client
-    docker run --rm -it --link redis redis:alpine redis-cli -h redis
+    $ docker-compose exec redis redis-cli
+    127.0.0.1:6379> LLEN logstsh
+    (integer) 0

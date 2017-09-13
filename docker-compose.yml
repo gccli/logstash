@@ -50,6 +50,7 @@ services:
       - "5530:5530/udp"
     volumes:
       - ./syslogd/syslogd.py:/usr/bin/syslogd.py
+      - ./syslogd/basefilter.py:/usr/bin/basefilter.py
       - /etc/localtime:/etc/localtime:ro
       - /etc/timezone:/etc/timezone:ro
     links:
@@ -62,6 +63,20 @@ services:
     command: syslogd.py -port 5510 -redis redis vfw
     ports:
       - "5510:5510/udp"
+    volumes:
+      - ./syslogd/syslogd.py:/usr/bin/syslogd.py
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
+    links:
+      - redis
+
+  syslogd_waf:
+    container_name: elk_syslogd_waf
+    build:
+      context: syslogd
+    command: syslogd.py -port 5520 -redis redis waf
+    ports:
+      - "5520:5520/udp"
     volumes:
       - ./syslogd/syslogd.py:/usr/bin/syslogd.py
       - /etc/localtime:/etc/localtime:ro

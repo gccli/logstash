@@ -25,18 +25,30 @@ class Pipe(object):
         return 'logstash-{0}'.format(today)
 
 
+
+    def process(self, d):
+        pass
+
     def index(self, d):
         try:
             res = self._es.index(index=self.current_index(),
                                  doc_type=d['log_type'], body=d)
         except elasticsearch.ElasticsearchException as e:
-            logging.error("Failed to index {0} - {1}".format(d, e.error))
+            self._db.rpush('_indexfailure', json.dumps(d))
+            length = self._db.llen('_indexfailure')
+            logging.error("Failed to index {0} - {1}, failure size {2}".format(d, e.error, length))
+
             return None
 
         return res
 
     def run(self):
         while True:
+            if not self._es.ping():
+                time.sleep(2.0)
+                logging.error("Waiting for elasticsearch cluster up...")
+                continue
+
             logdata = self._db.blpop('logstash')[1]
             try:
                 d = json.loads(logdata)
@@ -48,8 +60,8 @@ class Pipe(object):
                 logging.error("Invalid log format {0}".format(logdata))
                 continue
 
+            self.process(d)
             res = self.index(d)
-
 
 if __name__ == '__main__':
     logger = logging.getLogger()

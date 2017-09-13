@@ -13,7 +13,7 @@ import json
 import thread
 import redis
 from datetime import tzinfo, timedelta, datetime
-
+from basefilter import mutate
 ######## Plugin for parsing safekit syslog ########
 
 class TZ(tzinfo):
@@ -87,7 +87,6 @@ class hsmp(BasePlugin):
 
         log.update(json_dict)
         self._add_timestamp(log)
-        print json.dumps(log, indent=2); sys.stdout.flush()
 
         return log
 
@@ -111,14 +110,42 @@ class vfw(BasePlugin):
         log["log_time"] = log.pop("time")
 
         self._add_timestamp(log)
-        print json.dumps(log, indent=2); sys.stdout.flush()
+
+        return log
+
+
+class demo(BasePlugin):
+    def _add_timestamp(self, log):
+        d = datetime.today()
+        d = d.replace(tzinfo=TZ())
+        log['@timestamp'] = d.isoformat()
+
+    def handle(self):
+        try:
+            log = json.loads(self.message)
+        except:
+            logging.warn("Failed to parse message [{0}]".format(self.message))
+            return None
+
+        log["vendor"] = "demo"
+        log["log_type"] = "test"
+
+        self._add_timestamp(log)
 
         return log
 
 class waf(BasePlugin):
+    def _add_timestamp(self, log):
+        d = datetime.strptime(log['log_time'], '%b %d %H:%M:%S')
+        d = d.replace(year=datetime.today().year,
+                      tzinfo=TZ())
+        log['@timestamp'] = d.isoformat()
+
     def handle(self):
         log = {"vendor": "waf"}
-        return log
+
+        print self.message; sys.stdout.flush()
+        return None
 
 ######## Syslog daemon ########
 class UDPHandler(SocketServer.BaseRequestHandler):
@@ -134,13 +161,22 @@ class Syslogd(SocketServer.UDPServer):
 
         self.redisdb = redis.Redis(host=kwargs.get('redis_host'))
 
+        filter_config = kwargs.get('filter_config', {})
+        self.filters = []
+        for k in filter_config.keys():
+            self.filters.append(eval(k)(filter_config[k]))
+
         def _process_thread(plugin_class, queue, redisdb):
             while True:
                 client_ip, message = queue.get()
                 log = plugin_class(client_ip, message).handle()
                 if not log:
                     continue
+                for filt in self.filters:
+                    filt.filter(log)
+
                 try:
+                    print json.dumps(log, indent=2); sys.stdout.flush()
                     redisdb.rpush('logstash', json.dumps(log))
                 except:
                     logging.error("Failed to add data to redis")
@@ -151,7 +187,7 @@ class Syslogd(SocketServer.UDPServer):
                                         (plugin_class, self.queue, self.redisdb))
             logging.info('Starting thread {0}'.format(x))
 
-        logging.info("UDP listen on port {0}".format(port))
+        logging.info("UDP listen on port {0}, filters:{1}".format(port, self.filters))
 
     def enqueue(self, request):
         self.queue.put(request)
@@ -168,7 +204,7 @@ def plugin_test(plugin_name):
         s = s.strip()
         eval(plugin_name)('1.1.1.1', s).handle()
     except IOError as e:
-        print 'Can not exec test case:', e
+        print 'failed to exec test case:', e
 
 if __name__ == "__main__":
     logger = logging.getLogger()
@@ -192,12 +228,17 @@ if __name__ == "__main__":
     parser.add_argument('-redis', metavar='HOST', nargs='?', type=str,
                         default=os.environ.get('REDIS_HOST', 'localhost'),
                         help='Redis hostname, default localhost')
+    parser.add_argument('-f', metavar='FILTER', nargs='?', type=str, default=None,
+                        help='filter config file, json format')
 
-    parser.add_argument('plugin', nargs='?', choices=['vfw','hsmp','waf'])
+    parser.add_argument('plugin', nargs='?', choices=['vfw','hsmp','waf', 'demo'])
     args = parser.parse_args()
+
+    filter_config = json.loads(open(args.f, 'r').read()) if args.f else {}
 
     plugin_test(args.plugin)
     syslogd = Syslogd(args.port, eval(args.plugin),
                       threads=args.threads, qsize=args.qsize,
-                      redis_host=args.redis)
+                      redis_host=args.redis,
+                      filter_config=filter_config)
     syslogd.run()

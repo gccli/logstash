@@ -1,0 +1,17 @@
+{
+    "mutate": {
+        "rename": {
+            "server-ip": "destination",
+            "client-ip": "source"
+        },
+        "convert": {
+            "direction": "string"
+        },
+        "gsub": {
+            "type": [
+                "log_",
+                ""
+            ]
+        }
+    }
+}
