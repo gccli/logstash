@@ -45,12 +45,13 @@ services:
     container_name: elk_syslogd_hsmp
     build:
       context: syslogd
-    command: syslogd.py -port 5530 -redis redis hsmp
+    command: syslogd.py -port 5530 -f /filter.json -redis redis hsmp
     ports:
       - "5530:5530/udp"
     volumes:
       - ./syslogd/syslogd.py:/usr/bin/syslogd.py
       - ./syslogd/basefilter.py:/usr/bin/basefilter.py
+      - ./syslogd/config/filter-hsmp.json:/filter.json
       - /etc/localtime:/etc/localtime:ro
       - /etc/timezone:/etc/timezone:ro
     links:

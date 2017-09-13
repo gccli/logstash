@@ -1,0 +1,7 @@
+{
+    "mutate": {
+        "convert": {
+            "direction": "string"
+        }
+    }
+}

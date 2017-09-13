@@ -187,7 +187,8 @@ class Syslogd(SocketServer.UDPServer):
                                         (plugin_class, self.queue, self.redisdb))
             logging.info('Starting thread {0}'.format(x))
 
-        logging.info("UDP listen on port {0}, filters:{1}".format(port, self.filters))
+        logging.info("UDP listen on port {0}, filters:{1}" \
+                     .format(port, [f.__class__.__name__ for f in self.filters]))
 
     def enqueue(self, request):
         self.queue.put(request)
