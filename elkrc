@@ -6,6 +6,7 @@ if [ $? -ne 0 ]; then
     export PATH=$PATH:${PWD}/bin
 fi
 
+
 alias logs='docker-compose logs --tail=100 -f'
 
 alias dc='docker-compose'
