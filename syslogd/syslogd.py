@@ -13,7 +13,9 @@ import json
 import thread
 import redis
 from datetime import tzinfo, timedelta, datetime
-from basefilter import mutate
+from basefilter import *
+import collections
+
 ######## Plugin for parsing safekit syslog ########
 
 class TZ(tzinfo):
@@ -235,11 +237,12 @@ if __name__ == "__main__":
     parser.add_argument('plugin', nargs='?', choices=['vfw','hsmp','waf', 'demo'])
     args = parser.parse_args()
 
-    filter_config = json.loads(open(args.f, 'r').read()) if args.f else {}
+    # load filter config
+    config = json.loads(open(args.f, 'r').read(), object_pairs_hook=collections.OrderedDict) if args.f else {}
 
     plugin_test(args.plugin)
     syslogd = Syslogd(args.port, eval(args.plugin),
                       threads=args.threads, qsize=args.qsize,
                       redis_host=args.redis,
-                      filter_config=filter_config)
+                      filter_config=config)
     syslogd.run()

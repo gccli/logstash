@@ -1,5 +1,6 @@
 {
     "mutate": {
+        "add_field": {"vendor": "demo"},
         "rename": {
             "server-ip": "destination",
             "client-ip": "source"
@@ -8,10 +9,25 @@
             "direction": "string"
         },
         "gsub": {
-            "type": [
-                "log_",
-                ""
-            ]
+            "type": [    "log_",    ""  ]
+        }
+    },
+    "translate": {
+        "vendor": {
+            "dictionary": {
+                "demo": "Demo",
+                "hsmp": "Host Security",
+                "vfw": "Virtual Firewall"
+            }
+        },
+        "status_code": {
+            "dictionary": {
+                "200": "OK",
+                "200": "Created",
+                "401": "Unauthorized",
+                "401": "Forbidden"
+            },
+            "new_field": "reason"
         }
     }
 }
